@@ -4,72 +4,68 @@
   const SAFE_BOTTOM = 0.15;  // bottom 15% of a video is left alone, that's where controls live
   const MIN = 1.25, MAX = 4, STEP = 0.25, DEFAULT = 2;
 
+  const Badge = globalThis.HoldFor2xBadge; // from badge.js, loaded first
+
   let holdSpeed = DEFAULT;
+  let badgeStyle = Badge.DEFAULT_STYLE, badgeLabel = "";
   let timer = null, held = false, video = null, prevRate = 1;
   let startX = 0, startY = 0, enforcer = null, swallowClick = false;
 
   const clamp = (n) => Math.min(MAX, Math.max(MIN, Math.round(n * 100) / 100));
   const fmt = (n) => String(+n.toFixed(2));
 
-  chrome.storage.local.get("holdSpeed", (r) => {
+  chrome.storage.local.get(["holdSpeed", "badgeStyle", "badgeLabel"], (r) => {
     if (r.holdSpeed) holdSpeed = clamp(r.holdSpeed);
+    if (r.badgeStyle) badgeStyle = r.badgeStyle;
+    if (r.badgeLabel != null) badgeLabel = r.badgeLabel;
   });
   chrome.storage.onChanged.addListener((c) => {
     if (c.holdSpeed) holdSpeed = clamp(c.holdSpeed.newValue);
+    if (c.badgeStyle) badgeStyle = c.badgeStyle.newValue || Badge.DEFAULT_STYLE;
+    if (c.badgeLabel) badgeLabel = c.badgeLabel.newValue || "";
   });
 
-  /* ---------- on-screen badge (lives in a shadow root so site CSS can't touch it) ---------- */
+  /* ---------- on-screen badge (lives in a closed shadow root so site CSS can't touch it) ---------- */
 
-  let host = null, pill = null, label = null, hideTimer = null, removeTimer = null;
+  let host = null, badge = null, hideTimer = null, fontLoaded = false;
+
+  // the badge number uses the bundled Fraunces; load it as bytes so page CSP can't block it
+  function loadFont() {
+    if (fontLoaded) return;
+    fontLoaded = true;
+    fetch(chrome.runtime.getURL("fonts/fraunces-latin-full-normal.woff2"))
+      .then((r) => r.arrayBuffer())
+      .then((buf) => new FontFace("HoldFor2x Fraunces", buf, { weight: "100 900" }).load())
+      .then((face) => document.fonts.add(face))
+      .catch(() => {}); // falls back to Georgia
+  }
 
   function buildBadge() {
     host = document.createElement("div");
     host.style.cssText =
       "all:initial;position:fixed;top:24px;left:50%;transform:translateX(-50%);" +
       "z-index:2147483647;pointer-events:none;";
-    const root = host.attachShadow({ mode: "closed" });
-
-    const style = document.createElement("style");
-    style.textContent =
-      ".pill{display:flex;align-items:center;gap:8px;padding:8px 14px 8px 12px;border-radius:999px;" +
-      "background:rgba(20,23,29,.85);color:#fff;font:600 15px/1 system-ui,-apple-system,'Segoe UI',sans-serif;" +
-      "font-variant-numeric:tabular-nums;opacity:0;transition:opacity .12s ease}" +
-      ".pill.on{opacity:1}" +
-      "svg{width:14px;height:14px;fill:#fff;flex:none}" +
-      "@media (prefers-reduced-motion:reduce){.pill{transition:none}}";
-
-    const ns = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(ns, "svg");
-    svg.setAttribute("viewBox", "0 0 16 16");
-    svg.setAttribute("aria-hidden", "true");
-    const path = document.createElementNS(ns, "path");
-    path.setAttribute("d", "M1 2.5v11l7-5.5zM8 2.5v11l7-5.5z");
-    svg.appendChild(path);
-
-    label = document.createElement("span");
-    pill = document.createElement("div");
-    pill.className = "pill";
-    pill.append(svg, label);
-    root.append(style, pill);
+    badge = Badge.make(host.attachShadow({ mode: "closed" }));
+    loadFont();
   }
 
-  function showBadge(text, sticky) {
+  // note: optional text shown in the label slot instead of the user's label
+  function showBadge(note, sticky) {
     if (!host) buildBadge();
-    label.textContent = text;
     clearTimeout(hideTimer);
-    clearTimeout(removeTimer);
+    badge.set({ speed: holdSpeed, style: badgeStyle, label: badgeLabel, note });
     const fs = document.fullscreenElement;
     const parent = fs && fs.tagName !== "VIDEO" ? fs : document.documentElement;
+    const fresh = host.parentNode !== parent || !badge.el.classList.contains("in");
     if (host.parentNode !== parent) parent.appendChild(host);
-    requestAnimationFrame(() => pill.classList.add("on"));
+    if (fresh) badge.enter();
     if (!sticky) hideTimer = setTimeout(hideBadge, 900);
   }
 
   function hideBadge() {
     if (!host) return;
     clearTimeout(hideTimer);
-    pill.classList.remove("on");
-    removeTimer = setTimeout(() => host.remove(), 160);
+    badge.leave(() => host.remove());
   }
 
   /* ---------- finding the video ---------- */
