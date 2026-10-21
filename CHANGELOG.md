@@ -2,6 +2,14 @@
 
 All notable changes to Hold for 2x. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Safari for macOS. An Xcode project in `safari/`, made with Apple's `safari-web-extension-converter`, wraps the same extension files as Chrome. Build and setup steps are in `safari/README.md`.
+
+### Fixed
+- The popup's speed number stays next to its "x" in Safari versions before 26.2, which don't support `field-sizing`.
+
 ## [2.7.0] - 2026-10-21
 
 ### Fixed

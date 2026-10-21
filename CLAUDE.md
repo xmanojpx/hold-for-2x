@@ -35,11 +35,15 @@ src/popup.js         stepper, typed input, clamping, hint message
 icons/               icon16/48/128.png (slate rounded square, two white forward triangles)
 fonts/               Geist + Geist Mono WOFF2 and their OFL licenses
 scripts/package.sh   builds the release zip into dist/
+safari/              Xcode wrapper for Safari (macOS), made with safari-web-extension-converter.
+                     References the root extension files, does not copy them. See safari/README.md.
 .preview/            design-pass previews (gitignored): theme-a/b/c.css, harness, screenshots
 README.md, LICENSE (MIT), .gitignore
 ```
 
 No build step. Load unpacked at `chrome://extensions` with Developer mode on.
+
+Safari: open `safari/Hold for 2x/Hold for 2x.xcodeproj` and run. The extension target bundles only `manifest.json`, `src`, `icons`, `fonts`, `LICENSE` from the repo root. If you regenerate the project, redo the post-converter edits listed in `safari/README.md`. Keep `MARKETING_VERSION` in sync with the manifest version. `popup.js` has a `fit()` fallback for Safari before 26.2 (no `field-sizing`); it is a no-op where `field-sizing` is supported.
 
 ## Behavior details that were deliberate
 

@@ -16,6 +16,10 @@ https://github.com/user-attachments/assets/3861b1e8-b052-40fd-acfd-c66197127f41
 
 Works in Chrome and other Chromium browsers (Edge, Brave). There's no build step, so you can also clone the repo and load the folder directly.
 
+### Safari (macOS)
+
+Safari extensions ship inside a small Mac app, so for now you build it yourself with Xcode. The steps are in [`safari/README.md`](safari/README.md). The short version: open `safari/Hold for 2x/Hold for 2x.xcodeproj`, press Run, tick **Allow unsigned extensions** in Safari's Developer settings, then turn on **Hold for 2x** under Settings → Extensions. It uses the same extension files as Chrome. It hasn't been tested by hand on video sites in Safari yet.
+
 ## Use
 
 - **Hold** the left mouse button on a playing video. After a quarter of a second it speeds up. Release to go back.

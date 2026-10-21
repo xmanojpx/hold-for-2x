@@ -20,6 +20,18 @@ const snap = (n) => clamp(MIN + Math.round((n - MIN) / STEP) * STEP);
 const fmt = (n) => String(+n.toFixed(2));
 const frac = (n) => (n - MIN) / (MAX - MIN);
 
+// Safari before 26.2 has no field-sizing, so size the number to its text to keep the "x" right after it
+const fit = CSS.supports("field-sizing", "content") ? () => {} : (() => {
+  const ctx = document.createElement("canvas").getContext("2d");
+  return () => {
+    const cs = getComputedStyle(input), text = input.value || "0";
+    ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const spacing = (parseFloat(cs.letterSpacing) || 0) * text.length;
+    input.style.width = Math.ceil(ctx.measureText(text).width + spacing + 2) + "px";
+  };
+})();
+input.addEventListener("input", fit);
+document.fonts.ready.then(fit);
 
 function say(msg, kind) {
   hint.textContent = msg;
@@ -46,6 +58,7 @@ for (let i = 0; i <= STEPS; i++) {
 
 function render(animate) {
   if (document.activeElement !== input) input.value = fmt(speed);
+  fit();
   dec.disabled = speed <= MIN;
   inc.disabled = speed >= MAX;
   const pct = frac(speed) * 100 + "%";
